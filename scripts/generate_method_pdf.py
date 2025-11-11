@@ -10,88 +10,68 @@ PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
 
-from app.models.cost_model import (
-    INSULATION_W_PER_M2,
-    CLIMATE_MULTIPLIER,
-    BASE_COST_PER_KW,
-    EMITTERS_FACTOR,
-    COMPLEXITY_FACTOR,
-    BRAND_PREMIUM,
-    DHW_COST_BY_TYPE,
-    AUX_FLAT_COSTS,
-)
+from app.models.cost_model import get_form_spec, PRICING
 
 OUTPUT_PATH = "docs/methode_de_calcul.pdf"
 
 def format_dict(d: dict) -> list:
-    return [f"- {k} = {v}" for k, v in d.items()]
+    if isinstance(d, dict):
+        return [f"- {k} = {v}" for k, v in d.items()]
+    else:
+        return [f"- {d}"]
 
 CONTENT = {
-    "title": "Méthode de calcul — Estimation coût Pompe à Chaleur",
-    "sections": [
+    "title": "Méthode de calcul — Estimation coût d'installation d'une Pompe à Chaleur",
+    "sections":
+    [
+        
         {
-            "heading": "1) Données d'entrée",
-            "lines": [
-                "- surface_m2 : surface chauffée en m² (ex : 120)",
-                "- insulation : niveau d'isolation (très_bon, bon, moyen, mauvais)",
-                "- climate : zone climatique (doux, tempéré, froid)",
-                "- hp_type : type de pompe (air_air, air_eau, geothermie)",
-                "- emitters : type d'émetteurs (radiateurs_basse_t, radiateurs_haut_t, plancher_chauffant)",
-                "- complexity : complexité du chantier (simple, standard, complexe)",
-                "- needs_dhw : besoin d'ECS (True/False)",
-                "- brand : gamme (entrée_de_gamme, milieu_de_gamme, premium)",
-            ],
+            "heading": "Pricing — base_m2_ht (€/m² HT)",
+            "lines": lambda: format_dict(PRICING.get('base_m2_ht', {})),
         },
         {
-            "heading": "Constantes — Déperditions par isolation (W/m²)",
-            "lines": format_dict(INSULATION_W_PER_M2),
+            "heading": "Pricing — coef_isolation",
+            "lines": lambda: format_dict(PRICING.get('coef_isolation', {})),
         },
         {
-            "heading": "Constantes — Facteurs climatiques",
-            "lines": format_dict(CLIMATE_MULTIPLIER),
+            "heading": "Pricing — coef_climat",
+            "lines": lambda: format_dict(PRICING.get('coef_climat', {})),
         },
         {
-            "heading": "Constantes — Coût unitaire par kW (€/kW)",
-            "lines": format_dict(BASE_COST_PER_KW),
+            "heading": "Pricing — coef_logement",
+            "lines": lambda: format_dict(PRICING.get('coef_logement', {})),
         },
         {
-            "heading": "Constantes — Facteurs émetteurs",
-            "lines": format_dict(EMITTERS_FACTOR),
+            "heading": "Pricing — coef_acces_chantier",
+            "lines": lambda: format_dict(PRICING.get('coef_acces_chantier', {})),
         },
         {
-            "heading": "Constantes — Facteurs complexité",
-            "lines": format_dict(COMPLEXITY_FACTOR),
+            "heading": "Pricing — coef_emetteurs",
+            "lines": lambda: format_dict(PRICING.get('coef_emetteurs', {})),
         },
         {
-            "heading": "Constantes — Prime de marque",
-            "lines": format_dict(BRAND_PREMIUM),
+            "heading": "Pricing — airair_pieces",
+            "lines": lambda: format_dict(PRICING.get('airair_pieces', {})),
         },
         {
-            "heading": "Constantes — Coûts ECS par type",
-            "lines": format_dict(DHW_COST_BY_TYPE),
+            "heading": "Pricing — ECS",
+            "lines": lambda: format_dict(PRICING.get('ecs', {})),
         },
         {
-            "heading": "Constantes — Coûts auxiliaires fixes",
-            "lines": format_dict(AUX_FLAT_COSTS),
+            "heading": "Pricing — TVA",
+            "lines": lambda: format_dict(PRICING.get('tva', {})),
         },
         {
             "heading": "Formules clés",
             "lines": [
-                "Puissance (kW) = (surface_m2 × déperdition_specifique (W/m²) × facteur_climatique × 1.10) / 1000",
-                "Coût de base (EUR) = required_kW × coût_unitaire_par_kW",
-                "Coût ajusté = coût de base × facteur_émetteurs × facteur_complexité × prime_marque",
-                "Total = coût ajusté + somme(coûts_auxiliaires) + coût_ECS (si applicable)",
+                "surface_corr = surface × coef_isolation × coef_climat",
+                "base_ht = surface_corr × base_m2_ht",
+                "coef_global = coef_logement × coef_acces_chantier × coef_emetteurs × coef_airair",
+                "cout_ht = base_ht × coef_global + cout_ecs_ht",
+                "cout_ttc = cout_ht × (1 + tva)",
             ],
         },
-        {
-            "heading": "Exemple rapide",
-            "lines": [
-                "Surface=120 m², insulation=bon (50 W/m²), climate=tempéré (×1.0)",
-                "Puissance = (120 × 50 × 1.0 × 1.10) / 1000 = 6.6 kW",
-                "Si air_eau (1400 €/kW) : base = 6.6 × 1400 = 9240 €",
-                "Ex: coûts auxiliaires = sum(...) ; ECS air_eau = 2500 € → Total = base ajusté + aux + 2500",
-            ],
-        },
+
     ],
 }
 
@@ -114,7 +94,14 @@ def generate_pdf(path: str = OUTPUT_PATH):
         c.drawString(margin, y, sec["heading"])
         y -= 6 * mm
         c.setFont("Helvetica", 10)
-        for line in sec["lines"]:
+        # support lines that are either static lists or callables returning a list
+        lines = sec.get("lines", [])
+        if callable(lines):
+            try:
+                lines = lines()
+            except Exception:
+                lines = ["(impossible de charger ces lignes)"]
+        for line in lines:
             # wrap manually if too long
             max_width = width - 2 * margin
             text = line

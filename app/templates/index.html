@@ -15,67 +15,27 @@
 
         <form method="post" action="/estimate"
             class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white p-4 rounded-2xl shadow">
-            <label class="flex flex-col">Surface chauffée (m²)
-                <input required step="1" min="10" name="surface_m2" type="number" class="mt-1 border rounded px-3 py-2"
-                    placeholder="120" />
-            </label>
-
-            <label class="flex flex-col">Niveau d’isolation
-                <select name="insulation" class="mt-1 border rounded px-3 py-2">
-                    <option value="très_bon">Très bon (RT2012+)</option>
-                    <option value="bon">Bon (rénovation isolée)</option>
-                    <option value="moyen">Moyen</option>
-                    <option value="mauvais">Mauvais</option>
-                </select>
-            </label>
-
-            <label class="flex flex-col">Zone climatique
-                <select name="climate" class="mt-1 border rounded px-3 py-2">
-                    <option value="doux">Doux (ex: littoral atlantique)</option>
-                    <option value="tempéré" selected>Tempéré</option>
-                    <option value="froid">Froid (ex: Est/montagne)</option>
-                </select>
-            </label>
-
-
-            <label class="flex flex-col">Type de Pompe à chaleur
-                <select name="hp_type" class="mt-1 border rounded px-3 py-2">
-                    <option value="air_air">Air/Air</option>
-                    <option value="air_eau" selected>Air/Eau</option>
-                    <option value="geothermie">Géothermie</option>
-                </select>
-            </label>
-
-            <label class="flex flex-col">Émetteurs
-                <select name="emitters" class="mt-1 border rounded px-3 py-2">
-                    <option value="radiateurs_basse_t" selected>Radiateurs basse T°</option>
-                    <option value="radiateurs_haut_t">Radiateurs haute T°</option>
-                    <option value="plancher_chauffant">Plancher chauffant</option>
-                </select>
-            </label>
-
-            <label class="flex flex-col">Complexité du chantier
-                <select name="complexity" class="mt-1 border rounded px-3 py-2">
-                    <option value="simple">Simple</option>
-                    <option value="standard" selected>Standard</option>
-                    <option value="complexe">Complexe</option>
-                </select>
-            </label>
-
-
-            <label class="flex items-center gap-2"><input name="needs_dhw" type="checkbox" checked /> Eau chaude
-                sanitaire
-                (ECS)</label>
-
-
-            <label class="flex flex-col">Gamme de marque
-                <select name="brand" class="mt-1 border rounded px-3 py-2">
-                    <option value="entrée_de_gamme">Entrée de gamme</option>
-                    <option value="milieu_de_gamme" selected>Milieu de gamme</option>
-                    <option value="premium">Premium</option>
-                </select>
-            </label>
-
+            {% for f in fields %}
+                {% if f.type == 'select' %}
+                <label class="flex flex-col">{{ f.label }}
+                    <select name="{{ f.id }}" class="mt-1 border rounded px-3 py-2" {% if f.required %}required{% endif %}>
+                        {% for opt in f.options %}
+                        <option value="{{ opt }}" {% if defaults.get(f.id) == opt %}selected{% endif %}>{{ opt }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+                {% elif f.type == 'number' %}
+                <label class="flex flex-col">{{ f.label }}
+                    <input name="{{ f.id }}" type="number" class="mt-1 border rounded px-3 py-2" {% if f.get('integer', False) %}step="1"{% else %}step="0.1"{% endif %} inputmode="decimal" placeholder="Saisir une valeur"
+                        {% if f.min is defined %} min="{{ f.min }}"{% endif %} {% if f.max is defined %} max="{{ f.max }}"{% endif %}
+                        value="{{ defaults.get(f.id, '') }}" {% if f.required %}required{% endif %} />
+                </label>
+                {% elif f.type == 'boolean' %}
+                <label class="flex items-center gap-2"><input name="{{ f.id }}" type="checkbox" {% if defaults.get(f.id) %}checked{% endif %} /> {{ f.label }}</label>
+                {% else %}
+                <!-- unsupported type -->
+                {% endif %}
+            {% endfor %}
 
             <div class="md:col-span-2 flex justify-end">
                 <button class="bg-blue-600 text-white px-5 py-2 rounded-xl shadow hover:bg-blue-700">Calculer</button>
@@ -97,33 +57,35 @@
         {% if result %}
         <section class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
             <div class="bg-white p-4 rounded-2xl shadow">
-                <h3 class="font-semibold">Total</h3>
-                <p class="text-3xl font-bold">{{ '{:,.0f}'.format(result.total).replace(',', ' ') }} €</p>
-                <p class="text-sm text-slate-500">Matériel et main d'oeuvre</p>
+                <h3 class="font-semibold">Hors taxes (HT)</h3>
+                <p class="text-2xl font-bold">{{ '{:,.0f}'.format(result.cout_ht).replace(',', ' ') }} {{ currency }}</p>
+                <p class="text-sm text-slate-500">Coût estimatif (matériel & pose), hors taxesT</p>
             </div>
-        
-        </section>
-
-<!-- *** Details du calcul en commentaire
-        <section class="mt-6 bg-white p-4 rounded-2xl shadow">
             <div class="bg-white p-4 rounded-2xl shadow">
-                <h3 class="font-semibold">Puissance à installer</h3>
-                <p class="text-3xl font-bold">{{ result.required_kw }} kW</p>
-                <p class="text-sm text-slate-500"> </p>
+                <h3 class="font-semibold">Total (TTC)</h3>
+                <p class="text-3xl font-bold">{{ '{:,.0f}'.format(result.cout_ttc).replace(',', ' ') }} {{ currency }}</p>
+                <p class="text-sm text-slate-500">Coût estimatif (matériel & pose), TVA 20%</p>
             </div>
-            <h3 class="font-semibold mb-2">Détails</h3>
-            <ul class="grid grid-cols-1 md:grid-cols-2 gap-2">
-                <li>Coût unitaire par kW : {{ result.details.cost_per_kw }} €/kW</li>
-                <li>Facteur émetteurs : × {{ result.details.emitters_factor }}</li>
-                <li>Complexité chantier : × {{ result.details.complexity_factor }}</li>
-                <li>Surcote de marque : × {{ result.details.brand_premium }}</li>
-                <li>Coûts auxiliaires : {{ '{:,.0f}'.format(result.aux_costs_eur).replace(',', ' ') }} €</li>
-                <li>ECS : {{ '{:,.0f}'.format(result.dhw_cost_eur).replace(',', ' ') }} €</li>
-            </ul>
-        </section>
+            <div class="bg-white p-4 rounded-2xl shadow">
+                <h3 class="font-semibold">PARTIE A SUPPRIMER DANS VERSION FINALE</h3>
+                <div class="text-sm text-slate-700 mt-2">
+                    <h4 class="font-medium">Formule complète</h4>
+                    <pre class="mt-2 p-3 bg-slate-50 rounded text-xs overflow-auto">{
+cout_ht = (surface × coef_iso × coef_clim × base_m2_ht) × coef_log × coef_acces × coef_emit × coef_airair + cout_ecs_ht
 
-*** Fin du commentaire du detail du calcul
--->
+   substitution numérique:
+   surface_corr = {{ result.details.surface_corr }} m²
+   base_m2_ht = {{ result.details.base_m2_ht }} €/m²
+   base_ht = {{ '{:,.2f}'.format(result.details.base_ht).replace(',', ' ') }} €
+   coef_global = {{ result.details.coef_global }}
+   cout_ecs_ht = {{ result.details.cout_ecs_ht }} {{ currency }}
+
+   cout_ht = base_ht × coef_global + cout_ecs_ht = {{ '{:,.2f}'.format(result.cout_ht).replace(',', ' ') }} {{ currency }} (HT)
+   cout_ttc = cout_ht × (1 + {{ (result.tva)|round(2) }}) = {{ '{:,.2f}'.format(result.cout_ttc).replace(',', ' ') }} {{ currency }} (TTC)
+}</pre>
+                </div>
+            </div>
+        </section>
 
         {% endif %}
 
