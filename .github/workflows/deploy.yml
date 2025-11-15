@@ -1,36 +1,66 @@
-name: Deploy to Azure
+# Docs for the Azure Web Apps Deploy action: https://github.com/Azure/webapps-deploy
+# More GitHub Actions for Azure: https://github.com/Azure/actions
+# More info on Python, GitHub Actions, and Azure App Service: https://aka.ms/python-webapps-actions
+
+name: Build and deploy Python app to Azure Web App - thermocost2
 
 on:
   push:
     branches:
       - main
+  workflow_dispatch:
 
 jobs:
-  build-and-deploy:
+  build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v4
+      - name: Set up Python version
+        uses: actions/setup-python@v5
         with:
-          python-version: '3.13'
+          python-version: '3.12'
 
-      - name: Install dependencies
+      - name: Create and start virtual environment and install dependencies
         run: |
-          python -m pip install --upgrade pip
+          python -m venv antenv
+          source antenv/bin/activate
           pip install -r requirements.txt
-
-      - name: Run tests (optional)
-        run: |
-          # Ajoutez vos tests ici si nécessaire
-          echo "Tests would run here"
-
-      - name: Deploy to Azure App Service
-        uses: azure/webapps-deploy@v2
+                
+      - name: Upload artifact for deployment jobs
+        uses: actions/upload-artifact@v4
         with:
-          app-name: ${{ secrets.AZURE_APP_NAME }}
-          publish-profile: ${{ secrets.AZURE_PUBLISH_PROFILE }}
-          package: .
+          name: python-app
+          path: |
+            .
+            !antenv/
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Download artifact from build job
+        uses: actions/download-artifact@v4
+        with:
+          name: python-app
+      
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_651C11C8DB59440EB4E5D464FA1AA9DA }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_BCA2112CA138417085C7C99710FC520E }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_E0375160C02B43A187EF62E40CC49BCD }}
+
+      - name: 'Deploy to Azure Web App'
+        uses: azure/webapps-deploy@v3
+        id: deploy-to-webapp
+        with:
+          app-name: 'thermocost2'
+          slot-name: 'Production'
