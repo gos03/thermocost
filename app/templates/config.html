@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Configuration - cost_model.json</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-50 text-slate-800">
+  <main class="max-w-4xl mx-auto p-6">
+    <h1 class="text-2xl font-bold mb-4">Configuration du modèle de coût</h1>
+
+    {% if message %}
+    <div class="mb-4 p-3 rounded bg-yellow-100 text-yellow-800">{{ message }}</div>
+    {% endif %}
+
+    {% if step == 'login' %}
+    <form method="post" action="/config" class="bg-white p-4 rounded shadow">
+      <input type="hidden" name="action" value="login" />
+      <label class="flex flex-col">Code d'accès
+        <input name="code" type="password" class="mt-1 border rounded px-3 py-2" required />
+      </label>
+      <div class="mt-4"><button class="bg-blue-600 text-white px-4 py-2 rounded">Se connecter</button></div>
+    </form>
+    {% elif step == 'edit' %}
+
+    <form method="post" action="/config" class="bg-white p-4 rounded shadow">
+      <input type="hidden" name="action" value="save" />
+      <label class="flex flex-col">Code d'accès (requis pour sauvegarder)
+        <input name="code" type="password" class="mt-1 border rounded px-3 py-2" required />
+      </label>
+      <label class="flex flex-col mt-4">Contenu de <code>app/models/cost_model.json</code>
+        <textarea name="json_content" rows="24" class="mt-1 border rounded px-3 py-2 font-mono text-xs">{{ json_text }}</textarea>
+      </label>
+      <div class="mt-4 flex gap-2">
+        <button class="bg-green-600 text-white px-4 py-2 rounded">Enregistrer</button>
+        <a href="/" class="bg-gray-200 px-4 py-2 rounded">Retour</a>
+      </div>
+    </form>
+
+    {% endif %}
+
+  </main>
+</body>
+</html>
