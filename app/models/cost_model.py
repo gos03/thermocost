@@ -29,6 +29,7 @@ class InputParams(BaseModel):
     isolation: str
     emetteurs: str
     climat: str
+    temperature_max_ete_dernier: int = 25
     pieces_airair: Optional[int] = 0
     ecs_inclus: bool = False
     nb_personnes: int = Field(..., ge=1)

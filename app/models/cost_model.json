@@ -93,6 +93,15 @@
       "weight_hint": "moyen"
     },
     {
+      "id": "temperature_max_ete_dernier",
+      "label": "Temperature max été dernier en °C",
+      "type": "number",
+      "integer": true,
+      "default": 25,
+      "required": true,
+      "weight_hint": "moyen"
+    },
+    {
       "id": "pieces_airair",
       "label": "(Si PAC air-air) Nombre de pièces à équiper",
       "type": "number",

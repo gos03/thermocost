@@ -23,8 +23,7 @@ def build_defaults(fields):
             opts = f.get('options', [])
             defaults[fid] = opts[0] if opts else ''
         elif ftype == 'number':
-            # Leave number fields empty so user enters their own value
-            defaults[fid] = ''
+            defaults[fid] = f.get('default', '')
         elif ftype == 'boolean':
             defaults[fid] = False
         else:
