@@ -24,51 +24,70 @@ CONTENT = {
     "title": "Méthode de calcul — Estimation coût d'installation d'une Pompe à Chaleur",
     "sections":
     [
-        
         {
-            "heading": "Pricing — base_m2_ht (€/m² HT)",
+            "heading": "1) Données d'entrée",
+            "lines": lambda: [f"- {f['id']}: {f.get('label', f['id'])}" for f in get_form_spec()],
+        },
+        {
+            "heading": "2) Paramètres de base — base_m2_ht (€/m² HT)",
             "lines": lambda: format_dict(PRICING.get('base_m2_ht', {})),
         },
         {
-            "heading": "Pricing — coef_isolation",
+            "heading": "3) Coefficients d'isolation",
             "lines": lambda: format_dict(PRICING.get('coef_isolation', {})),
         },
         {
-            "heading": "Pricing — coef_climat",
+            "heading": "4) Coefficients climatiques",
             "lines": lambda: format_dict(PRICING.get('coef_climat', {})),
         },
         {
-            "heading": "Pricing — coef_logement",
+            "heading": "5) Coefficients type logement",
             "lines": lambda: format_dict(PRICING.get('coef_logement', {})),
         },
         {
-            "heading": "Pricing — coef_acces_chantier",
+            "heading": "6) Coefficients accès chantier",
             "lines": lambda: format_dict(PRICING.get('coef_acces_chantier', {})),
         },
         {
-            "heading": "Pricing — coef_emetteurs",
+            "heading": "7) Coefficients émetteurs",
             "lines": lambda: format_dict(PRICING.get('coef_emetteurs', {})),
         },
         {
-            "heading": "Pricing — airair_pieces",
+            "heading": "8) Gestion air-air (pièces supplémentaires)",
             "lines": lambda: format_dict(PRICING.get('airair_pieces', {})),
         },
         {
-            "heading": "Pricing — ECS",
-            "lines": lambda: format_dict(PRICING.get('ecs', {})),
+            "heading": "9) Coûts ECS (Eau Chaude Sanitaire)",
+            "lines": lambda: format_dict({k: v for k, v in PRICING.get('ecs', {}).items() if k != 'enabled_if'}),
         },
         {
-            "heading": "Pricing — TVA",
+            "heading": "10) Taux de TVA",
             "lines": lambda: format_dict(PRICING.get('tva', {})),
         },
         {
-            "heading": "Formules clés",
+            "heading": "11) Formule de calcul",
             "lines": [
-                "surface_corr = surface × coef_isolation × coef_climat",
-                "base_ht = surface_corr × base_m2_ht",
-                "coef_global = coef_logement × coef_acces_chantier × coef_emetteurs × coef_airair",
-                "cout_ht = base_ht × coef_global + cout_ecs_ht",
-                "cout_ttc = cout_ht × (1 + tva)",
+                "étape 1: surface_corr = surface × coef_isolation × coef_climat",
+                "étape 2: base_ht = surface_corr × base_m2_ht[type_usage]",
+                "étape 3: coef_global = coef_logement × coef_acces_chantier × coef_emetteurs × coef_airair",
+                "étape 4: cout_ecs_ht = (ecs_inclus ? cout_ecs_ht_base + cout_ecs_ht_par_personne × nb_personnes : 0)",
+                "étape 5: cout_ht = base_ht × coef_global + cout_ecs_ht",
+                "étape 6: cout_ttc = cout_ht × (1 + tva_standard = 0.20)",
+            ],
+        },
+        {
+            "heading": "12) Exemple de calcul",
+            "lines": [
+                "Scenario: Air-eau (chauffage + ECS), Maison individuelle, 120 m²",
+                "  - type_usage: Air-eau (chauffage + ECS) → base_m2_ht = 110 €/m²",
+                "  - isolation: Moyenne → coef_iso = 1.0",
+                "  - climat: Zone tempérée → coef_clim = 1.0",
+                "  - surface_corr = 120 × 1.0 × 1.0 = 120 m²",
+                "  - base_ht = 120 × 110 = 13 200 €",
+                "  - coef_global = 1.0 (logement) × 1.0 (acces) × 1.0 (emetteurs) × 1.0 (airair) = 1.0",
+                "  - cout_ecs_ht = 800 + 250 × 3 = 1 550 € (pour 3 personnes)",
+                "  - cout_ht = 13 200 × 1.0 + 1 550 = 14 750 €",
+                "  - cout_ttc = 14 750 × 1.20 = 17 700 €",
             ],
         },
 
